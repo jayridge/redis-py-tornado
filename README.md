@@ -6,16 +6,20 @@ greenlet based redis-py doodad
 
 ```python
 import tornado
-from tornado import options, ioloop, gen
 import logging
 import redis
 import greenlet
 import string
 import random
+import functools
+
+from tornado import gen
 from tornadoconnection import TornadoConnection, TornadoHiredisParser
+
 
 @tornado.gen.engine
 def execute(func, *args, **kwargs):
+    print args, kwargs
     def greenlet_func():
         callback = kwargs.pop('callback')
         ret = func(*args, **kwargs)
@@ -26,21 +30,27 @@ def execute(func, *args, **kwargs):
 
 @tornado.gen.engine
 def test():
-    items = range(60)
+    load_data()
     pipe = r.pipeline()
-    for item in items:
-        pipe.lrange(item, 0, -1)
+    for key in keys:
+        pipe.lrange(key, 0, -1)
     results = yield tornado.gen.Task(execute, pipe.execute)
     logging.info("test results: %.200r" % results)
 
+def load_data():
+    for key in keys:
+        val = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(24))
+        execute(r.lpush, key, val, callback=(yield gen.Callback(key)))
+    tornado.gen.WaitAll(keys)
+
 if __name__ == '__main__':
-    tornado.options.parse_command_line()
     logging.getLogger().setLevel(logging.DEBUG)
     
+    keys = range(50)
     pool = redis.ConnectionPool(connection_class=TornadoConnection, host='localhost', port=6379, db=0)
     r = redis.StrictRedis(connection_pool=pool)
-    logging.info("starting tornado redis")
     
-    ioloop.IOLoop.instance().add_callback(test)
-    ioloop.IOLoop.instance().start()
+    tornado.ioloop.IOLoop.instance().add_callback(test)
+    tornado.ioloop.IOLoop.instance().start()
+
 ```
