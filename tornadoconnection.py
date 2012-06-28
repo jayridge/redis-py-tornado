@@ -92,7 +92,7 @@ class TornadoConnection(object):
     
     def connect(self):
         "Connects to the Redis server if not already connected"
-        if self.stream and self.stream.connected():
+        if self.stream and not self.stream.closed():
             return
         try:
             self._connect()
