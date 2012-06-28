@@ -26,7 +26,7 @@ def execute(func, *args, **kwargs):
 
 @tornado.gen.engine
 def test():
-   items = range(60)
+    items = range(60)
     pipe = r.pipeline()
     for item in items:
         pipe.lrange(item, 0, -1)
